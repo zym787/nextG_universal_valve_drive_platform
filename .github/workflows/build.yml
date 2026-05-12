@@ -29,6 +29,7 @@ jobs:
             project-path: '.'
             build-config: 'Release'
             build-target: 'all'
+            cmake-args: '-DCMAKE_TOOLCHAIN_FILE=../cmake/gcc-arm-none-eabi.cmake'
 
 # Step3: Upload build artifacts
         - name: Upload build artifacts
