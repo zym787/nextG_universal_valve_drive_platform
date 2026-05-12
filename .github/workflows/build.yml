@@ -37,7 +37,7 @@ jobs:
           with:
             name: build-artifacts
             path: |
-              build/Release/*.elf
-              build/Release/*.bin
-              build/Release/*.hex
+              build/*.elf
+              build/*.bin
+              build/*.hex
             retention-days: 1
