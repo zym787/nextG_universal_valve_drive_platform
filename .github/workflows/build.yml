@@ -15,7 +15,13 @@ jobs:
           uses: actions/checkout@v4
           with:
             submodules: true
-        
+
+        - name: Prepare writable build directory
+          run: |
+            rm -rf build
+            mkdir -p build
+            sudo chmod -R 777 "$GITHUB_WORKSPACE"
+
 # Step2: Build with STM32CubeCLT
         - name: Build with STM32CubeCLT
           uses: uoohyo/action-stm32-cmake@v1.21.0
