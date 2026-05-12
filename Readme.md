@@ -3,6 +3,7 @@
 
 [![Build STM32 CMake Project](https://github.com/zym787/nextG_universal_valve_drive_platform/actions/workflows/build.yml/badge.svg)](https://github.com/zym787/nextG_universal_valve_drive_platform/actions/workflows/build.yml)
 [![CodeQL](https://github.com/zym787/nextG_universal_valve_drive_platform/actions/workflows/github-code-scanning/codeql/badge.svg)](https://github.com/zym787/nextG_universal_valve_drive_platform/actions/workflows/github-code-scanning/codeql)
+[![flawfinder](https://github.com/zym787/nextG_universal_valve_drive_platform/actions/workflows/flawfinder.yml/badge.svg)](https://github.com/zym787/nextG_universal_valve_drive_platform/actions/workflows/flawfinder.yml)
 
 # Architecture Design
 ```mermaid
