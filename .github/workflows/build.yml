@@ -13,6 +13,8 @@ jobs:
 # Step1: Checkout code
         - name: Checkout code
           uses: actions/checkout@v4
+          with:
+            submodules: true
         
 # Step2: Build with STM32CubeCLT
         - name: Build with STM32CubeCLT
