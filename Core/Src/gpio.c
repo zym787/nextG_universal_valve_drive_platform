@@ -51,26 +51,26 @@ void MX_GPIO_Init(void)
   LL_APB2_GRP1_EnableClock(LL_APB2_GRP1_PERIPH_GPIOB);
 
   /**/
-  LL_GPIO_ResetOutputPin(GPIOC, LL_GPIO_PIN_14);
+  LL_GPIO_SetOutputPin(WORK_LED1_GPIO_Port, WORK_LED1_Pin);
 
   /**/
   LL_GPIO_ResetOutputPin(GPIOA, I2C_SDA_Pin|I2C_SCK_Pin|DRIVER_DIR_Pin|DRIVER_STEP_Pin
-                          |DRIVER_ENA_Pin|ISET3_Pin);
+                          |DRIVER_ENA_Pin|CURRENT_SET3_Pin);
 
   /**/
-  LL_GPIO_ResetOutputPin(GPIOB, ISE2_Pin|RT485_Pin|ISET1_Pin|DLCI_OUT_Pin);
+  LL_GPIO_ResetOutputPin(GPIOB, CURRENT_SE2_Pin|RT485_Pin|CURRENT_SET1_Pin|DLCI_OUT_Pin);
 
   /**/
-  GPIO_InitStruct.Pin = LL_GPIO_PIN_14;
+  GPIO_InitStruct.Pin = WORK_LED1_Pin;
   GPIO_InitStruct.Mode = LL_GPIO_MODE_OUTPUT;
   GPIO_InitStruct.Speed = LL_GPIO_SPEED_FREQ_LOW;
   GPIO_InitStruct.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
-  LL_GPIO_Init(GPIOC, &GPIO_InitStruct);
+  LL_GPIO_Init(WORK_LED1_GPIO_Port, &GPIO_InitStruct);
 
   /**/
-  GPIO_InitStruct.Pin = LL_GPIO_PIN_15;
+  GPIO_InitStruct.Pin = IN_OPTO1_Pin;
   GPIO_InitStruct.Mode = LL_GPIO_MODE_FLOATING;
-  LL_GPIO_Init(GPIOC, &GPIO_InitStruct);
+  LL_GPIO_Init(IN_OPTO1_GPIO_Port, &GPIO_InitStruct);
 
   /**/
   GPIO_InitStruct.Pin = I2C_SDA_Pin|I2C_SCK_Pin;
@@ -81,14 +81,14 @@ void MX_GPIO_Init(void)
   LL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
   /**/
-  GPIO_InitStruct.Pin = DRIVER_DIR_Pin|DRIVER_STEP_Pin|DRIVER_ENA_Pin|ISET3_Pin;
+  GPIO_InitStruct.Pin = DRIVER_DIR_Pin|DRIVER_STEP_Pin|DRIVER_ENA_Pin|CURRENT_SET3_Pin;
   GPIO_InitStruct.Mode = LL_GPIO_MODE_OUTPUT;
   GPIO_InitStruct.Speed = LL_GPIO_SPEED_FREQ_LOW;
   GPIO_InitStruct.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
   LL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
   /**/
-  GPIO_InitStruct.Pin = ISE2_Pin|RT485_Pin|ISET1_Pin|DLCI_OUT_Pin;
+  GPIO_InitStruct.Pin = CURRENT_SE2_Pin|RT485_Pin|CURRENT_SET1_Pin|DLCI_OUT_Pin;
   GPIO_InitStruct.Mode = LL_GPIO_MODE_OUTPUT;
   GPIO_InitStruct.Speed = LL_GPIO_SPEED_FREQ_LOW;
   GPIO_InitStruct.OutputType = LL_GPIO_OUTPUT_PUSHPULL;

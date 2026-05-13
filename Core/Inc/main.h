@@ -28,6 +28,7 @@ extern "C" {
 
 /* Includes ------------------------------------------------------------------*/
 
+#include "stm32f1xx_ll_adc.h"
 #include "stm32f1xx_ll_crc.h"
 #include "stm32f1xx_ll_dma.h"
 #include "stm32f1xx_ll_iwdg.h"
@@ -74,6 +75,10 @@ void Error_Handler(void);
 /* USER CODE END EFP */
 
 /* Private defines -----------------------------------------------------------*/
+#define WORK_LED1_Pin LL_GPIO_PIN_14
+#define WORK_LED1_GPIO_Port GPIOC
+#define IN_OPTO1_Pin LL_GPIO_PIN_15
+#define IN_OPTO1_GPIO_Port GPIOC
 #define I2C_SDA_Pin LL_GPIO_PIN_0
 #define I2C_SDA_GPIO_Port GPIOA
 #define I2C_SCK_Pin LL_GPIO_PIN_1
@@ -84,18 +89,18 @@ void Error_Handler(void);
 #define DRIVER_STEP_GPIO_Port GPIOA
 #define DRIVER_ENA_Pin LL_GPIO_PIN_6
 #define DRIVER_ENA_GPIO_Port GPIOA
-#define ISE2_Pin LL_GPIO_PIN_0
-#define ISE2_GPIO_Port GPIOB
+#define CURRENT_SE2_Pin LL_GPIO_PIN_0
+#define CURRENT_SE2_GPIO_Port GPIOB
 #define RT485_Pin LL_GPIO_PIN_1
 #define RT485_GPIO_Port GPIOB
-#define ISET1_Pin LL_GPIO_PIN_12
-#define ISET1_GPIO_Port GPIOB
+#define CURRENT_SET1_Pin LL_GPIO_PIN_12
+#define CURRENT_SET1_GPIO_Port GPIOB
 #define DLCI_OUT_Pin LL_GPIO_PIN_13
 #define DLCI_OUT_GPIO_Port GPIOB
 #define DLCI_IN_Pin LL_GPIO_PIN_14
 #define DLCI_IN_GPIO_Port GPIOB
-#define ISET3_Pin LL_GPIO_PIN_11
-#define ISET3_GPIO_Port GPIOA
+#define CURRENT_SET3_Pin LL_GPIO_PIN_11
+#define CURRENT_SET3_GPIO_Port GPIOA
 #ifndef NVIC_PRIORITYGROUP_0
 #define NVIC_PRIORITYGROUP_0         ((uint32_t)0x00000007) /*!< 0 bit  for pre-emption priority,
                                                                  4 bits for subpriority */

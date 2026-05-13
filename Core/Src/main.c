@@ -18,6 +18,7 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
+#include "adc.h"
 #include "crc.h"
 #include "dma.h"
 #include "iwdg.h"
@@ -113,6 +114,7 @@ int main(void)
   MX_USART3_UART_Init();
   MX_CRC_Init();
   MX_IWDG_Init();
+  MX_ADC1_Init();
   /* USER CODE BEGIN 2 */
   LL_GPIO_SetOutputPin(WORK_LED1_GPIO_Port, WORK_LED1_Pin);
   /* USER CODE END 2 */
@@ -172,6 +174,7 @@ void SystemClock_Config(void)
   }
   LL_Init1msTick(72000000);
   LL_SetSystemCoreClock(72000000);
+  LL_RCC_SetADCClockSource(LL_RCC_ADC_CLKSRC_PCLK2_DIV_6);
 }
 
 /* USER CODE BEGIN 4 */
