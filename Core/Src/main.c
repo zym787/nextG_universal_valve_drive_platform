@@ -22,7 +22,6 @@
 #include "crc.h"
 #include "dma.h"
 #include "iwdg.h"
-#include "stm32f1xx_ll_gpio.h"
 #include "tim.h"
 #include "usart.h"
 #include "gpio.h"
@@ -113,10 +112,10 @@ int main(void)
   MX_USART2_UART_Init();
   MX_USART3_UART_Init();
   MX_CRC_Init();
-  MX_IWDG_Init();
+  // MX_IWDG_Init();
   MX_ADC1_Init();
   /* USER CODE BEGIN 2 */
-  LL_GPIO_SetOutputPin(WORK_LED1_GPIO_Port, WORK_LED1_Pin);
+  LL_GPIO_ResetOutputPin(WORK_LED1_GPIO_Port, WORK_LED1_Pin);
   /* USER CODE END 2 */
 
   /* Infinite loop */
