@@ -28,7 +28,7 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include "app.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -112,10 +112,10 @@ int main(void)
   MX_USART2_UART_Init();
   MX_USART3_UART_Init();
   MX_CRC_Init();
-  // MX_IWDG_Init();
+  MX_IWDG_Init();
   MX_ADC1_Init();
   /* USER CODE BEGIN 2 */
-  LL_GPIO_ResetOutputPin(WORK_LED1_GPIO_Port, WORK_LED1_Pin);
+  app_MainLoop();   /* 接管主循环 */
   /* USER CODE END 2 */
 
   /* Infinite loop */
