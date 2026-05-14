@@ -4,8 +4,8 @@
  *          所有 bsp_* 对外函数应返回 bsp_status_t，禁止暴露 LL/HAL 错误码。
  */
 
-#ifndef BSP_STATUS_H
-#define BSP_STATUS_H
+#ifndef __BSP_STATUS_H__
+#define __BSP_STATUS_H__
 
 #ifdef __cplusplus
 extern "C" {
@@ -27,4 +27,4 @@ typedef enum {
 }
 #endif
 
-#endif /* BSP_STATUS_H */
+#endif /* __BSP_STATUS_H__ */

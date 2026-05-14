@@ -59,6 +59,12 @@ target_include_directories(application PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/Inc
 )
 
+# Add project symbols (macros)
+target_compile_definitions(application PUBLIC
+    # Add user defined symbols
+    APP_ENABLE_BRINGUP  # 初启时允许app直接调用bsp
+)
+
 # ---------------------------------------------------------------
 # 5. 依赖：Application 只允许依赖 Service
 #    使用 PRIVATE 严格执行单向依赖：
@@ -67,5 +73,6 @@ target_include_directories(application PUBLIC
 #      - main.c 只能通过 app.h 调用 app_Init / app_MainLoop
 # ---------------------------------------------------------------
 target_link_libraries(application PRIVATE
+    bsp
     service
 )

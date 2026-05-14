@@ -35,6 +35,9 @@ add_library(module STATIC ${_MOD_PLACEHOLDER})
 # 3. Module 源文件清单
 # ---------------------------------------------------------------
 target_sources(module PRIVATE
+    Src/mod_indicator.c           # 板上指示灯（WORK_LED 等）
+    Src/mod_systime.c             # 毫秒时基向 Service 暴露（桊接 bsp_timer）
+    Src/mod_watchdog.c            # IWDG 器件级抽象（桊接 bsp_iwdg）
     # Src/mod_eeprom.c            # 外部 EEPROM 器件驱动
     # Src/mod_stepper_driver.c    # 42 步进执行器（STEP/DIR/EN）
     # Src/mod_sensor_input.c      # 光感/限位/位置反馈

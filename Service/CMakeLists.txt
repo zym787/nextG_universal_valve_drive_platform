@@ -38,7 +38,8 @@ add_library(service STATIC ${_SVC_PLACEHOLDER})
 # 3. Service 源文件清单
 # ---------------------------------------------------------------
 target_sources(service PRIVATE
-    # Src/svc_system.c       # Service/Module/BSP 初始化与轮询聚合
+    Src/svc_system.c         # Service/Module 初始化与轮询聚合（含心跳）
+    Src/svc_watchdog.c       # 看门狗策略：任务存活上报 + 条件嗂狗
     # Src/svc_protocol.c     # 多协议解析、命令封包、校验
     # Src/svc_param.c        # 参数结构、双副本、CRC、版本迁移
     # Src/svc_motion.c       # 阀门模型、运动状态机、距离/速度换算

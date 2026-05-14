@@ -32,12 +32,14 @@ add_library(bsp STATIC)
 #    暂不需要的可以注释，构建时不会编译它。
 # ---------------------------------------------------------------
 target_sources(bsp PRIVATE
+    bsp.c
     Src/bsp_iwdg.c
+    Src/bsp_gpio.c          # 通用 GPIO 读写（LED/限位/方向脚）
+    Src/bsp_timer.c          # 1ms tick + 超时判定（SysTick 接入）
     # Src/bsp_usart.c       # TODO: 串口 + ringbuffer
     # Src/bsp_timer.c       # TODO: 定时器基础能力
     # Src/bsp_pwm.c         # TODO: PWM 输出（步进 STEP 脉冲）
     # Src/bsp_adc.c         # TODO: ADC 采样
-    # Src/bsp_gpio.c        # TODO: 通用 GPIO 读写
     # Src/bsp_soft_i2c.c    # TODO: 软件 I2C（驱动外部 EEPROM）
     # Src/bsp_dwt.c         # TODO: DWT 微秒计时
 )
@@ -48,6 +50,7 @@ target_sources(bsp PRIVATE
 #    因此上层 #include "bsp_iwdg.h" 不需要写完整相对路径。
 # ---------------------------------------------------------------
 target_include_directories(bsp PUBLIC
+    ${CMAKE_CURRENT_SOURCE_DIR}
     ${CMAKE_CURRENT_SOURCE_DIR}/Inc
 )
 

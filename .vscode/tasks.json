@@ -20,6 +20,11 @@
                                 "isDefault": true
                         }
                 },
-                
+                {
+                        "label": "Format BSP Module Application",
+                        "type": "shell",
+                        "command": "Get-ChildItem -Path .\\BSP,.\\Module,.\\Application,.\\BoardConfig,.\\Service -Recurse -Include *.c,*.h | ForEach-Object { clang-format -i $_.FullName }",
+                        "problemMatcher": []
+                },
         ]
 }

@@ -112,7 +112,7 @@ int main(void)
   MX_USART2_UART_Init();
   MX_USART3_UART_Init();
   MX_CRC_Init();
-  MX_IWDG_Init();
+  // MX_IWDG_Init();
   MX_ADC1_Init();
   /* USER CODE BEGIN 2 */
   app_MainLoop();   /* 接管主循环 */

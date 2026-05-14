@@ -22,6 +22,8 @@
 #include "stm32f1xx_it.h"
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+/* 仅为 SysTick 转发使用的 extern 声明，避免给 CubeMX 区引入 BSP 头路径 */
+extern void bsp_timer_TickInc(void);
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -183,7 +185,7 @@ void PendSV_Handler(void)
 void SysTick_Handler(void)
 {
   /* USER CODE BEGIN SysTick_IRQn 0 */
-
+  bsp_timer_TickInc();   /* 每 1ms 推进 BSP tick （供 bsp_timer_GetTickMs / IsTimeout 使用）*/
   /* USER CODE END SysTick_IRQn 0 */
 
   /* USER CODE BEGIN SysTick_IRQn 1 */

@@ -564,7 +564,7 @@ bsp_status_t bsp_Init(void)
         return BSP_ERR_HW;
     }
 
-    if (bsp_time_Init() != BSP_OK) {
+    if (bsp_timer_Init() != BSP_OK) {
         return BSP_ERR_HW;
     }
 

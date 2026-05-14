@@ -13,10 +13,15 @@
         "--query-driver=${env:CUBE_BUNDLE_PATH}/gnu-tools-for-stm32/14.3.1+st.2/bin/arm-none-eabi-g++*"
     ],
     "VsCodeTaskButtons.tasks": [
-    {
+        {
             "label": "$(chip) Flash",
             "task": "Flash",
             "tooltip": "Run Flash Task"
-    },
+        },
+        {
+            "label": "$(pencil) Format",
+            "task": "Format",
+            "tooltip": "Run Format Task"
+        },
     ]
 }
