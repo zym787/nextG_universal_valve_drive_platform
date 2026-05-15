@@ -155,6 +155,7 @@ add_library(application OBJECT)
 
 target_sources(application PRIVATE
     Src/app.c
+    Src/app_system.c
     Src/app_mode.c
     Src/app_guardian.c
     Src/app_version.c
@@ -170,7 +171,38 @@ target_link_libraries(application PUBLIC
 )
 ```
 
-Application 只链接 Service。
+Application 的模式/业务文件只调用 Service。`app_system.c` 是组合根，若需要直接包含 BSP/Module 头文件，可用 `PRIVATE` 依赖补足 include 和链接关系：
+
+```cmake
+target_link_libraries(application PRIVATE
+    module
+    bsp
+    selected_board_config
+)
+```
+
+约束：`app_system.c` 只编排初始化顺序，不写业务逻辑；`app_normal.c`、`app_factory.c`、`app_aging.c` 等文件仍只调用 Service。
+
+Bring-up 例外可以用 CMake 选项隔离：
+
+```cmake
+option(APP_ENABLE_BRINGUP "Enable board bring-up shortcuts" OFF)
+
+if(APP_ENABLE_BRINGUP)
+    target_sources(application PRIVATE
+        Src/app_bringup.c
+    )
+    target_compile_definitions(application PUBLIC
+        APP_ENABLE_BRINGUP=1
+    )
+    target_link_libraries(application PRIVATE
+        bsp
+        selected_board_config
+    )
+endif()
+```
+
+该例外只用于 Debug 或板级验证 preset，不进入 Release 正式配置。
 
 ## 4. CMake Presets
 
@@ -249,6 +281,13 @@ project.yml
 - Module 测试 mock BSP。
 - Application 测试 mock Service。
 - BSP 不强制 PC 覆盖率，后续用 HIL 和板级验证。
+
+落地顺序建议：
+
+1. 先用 Unity + 手写 fake 跑通一个最小测试。
+2. 再接入 Ceedling 统一 `test:all`。
+3. 稳定后使用 CMock 自动生成 mock。
+4. 最后接入 gcov/gcovr，并先观察覆盖率趋势，再设置门槛。
 
 推荐命令：
 

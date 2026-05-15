@@ -2,7 +2,7 @@
 
 返回：[工程文档总入口](about.md)
 
-本文档说明 `Application` 层如何编写。Application 是应用入口和流程编排层，负责“当前系统处在什么模式、这一轮主循环要调度哪些系统能力”，不负责硬件细节和业务算法本身。
+本文档说明 `Application` 层如何编写。Application 是应用入口和流程编排层，负责“当前系统处在什么模式、这一轮主循环要调度哪些系统能力”。其中 `app.c/app_system.c` 是组合根，允许编排 BSP、Module、Service 的初始化顺序；其他模式和业务文件仍不直接操作硬件。
 
 ## 1. 定位
 
@@ -21,6 +21,7 @@ Application 决定当前模式要做什么，Service 决定系统规则怎么执
 适合放在 Application：
 
 - `app`：固件应用入口，提供 `app_Init()` / `app_MainLoop()`。
+- `app_system`：组合根，负责 BSP、Module、Service 的初始化顺序。
 - `app_mode`：Normal、Factory、Aging 模式切换。
 - `app_normal`：正常运行流程。
 - `app_factory`：工厂写参、校准、单通道测试流程。
@@ -28,7 +29,7 @@ Application 决定当前模式要做什么，Service 决定系统规则怎么执
 - `app_guardian`：应用级守护、故障保持、喂狗条件和降级策略。
 - `app_version`：固件只读版本信息。
 
-不放在 Application：
+不放在 Application 的模式/业务文件中：
 
 - 协议帧解析和寄存器映射，这些放 `svc_protocol`。
 - 参数结构、CRC、EEPROM 双副本，这些放 `svc_param`。
@@ -83,7 +84,7 @@ Application 公共头文件允许包含：
 #include "svc_status.h"
 ```
 
-Application 源文件可以包含 Service 头文件：
+Application 的模式/业务源文件可以包含 Service 头文件：
 
 ```c
 #include "svc_system.h"
@@ -93,7 +94,7 @@ Application 源文件可以包含 Service 头文件：
 #include "svc_safety.h"
 ```
 
-Application 不允许包含：
+Application 的模式/业务文件不允许包含：
 
 ```c
 #include "mod_eeprom.h"
@@ -103,6 +104,11 @@ Application 不允许包含：
 #include "main.h"
 #include "stm32f1xx_ll_gpio.h"
 ```
+
+例外：
+
+- `app_system.c` 作为组合根，可以包含 `bsp.h`、`mod_xxx.h`、`svc_xxx.h`，只用于初始化和关闭顺序，不写业务逻辑。
+- `app_bringup.c` 可以在 `APP_ENABLE_BRINGUP=1` 时直接包含少量 BSP 头文件，用于 LED 闪烁、USART echo、IWDG 基础验证等早期调试。该路径不能进入 Release 正式功能，详细规则见 [Bring-up 示例与任务规划](bringup_examples_plan.md)。
 
 ## 4. 初始化与主循环
 
@@ -116,12 +122,16 @@ while (1) {
 }
 ```
 
-Application 再调用 Service：
+Application 组合根负责初始化顺序：
 
 ```c
 void app_Init(void)
 {
-    (void)svc_system_Init();
+    if (app_system_Init() != APP_OK) {
+        app_EnterFaultMode();
+        return;
+    }
+
     app_mode_Init();
     app_guardian_Init();
 }
@@ -134,17 +144,23 @@ void app_MainLoop(void)
 }
 ```
 
-建议 `svc_system_Init()` 内部完成 BSP、Module、Service 的初始化聚合：
+`app_system_Init()` 可以显式编排 BSP、Module、Service：
 
 ```text
 app_Init()
-  -> svc_system_Init()
+  -> app_system_Init()
       -> bsp_Init()
-      -> mod_xxx_Init()
-      -> svc_xxx_Init()
+      -> mod_eeprom_Init()
+      -> mod_stepper_driver_Init()
+      -> mod_comm_port_Init()
+      -> svc_param_Init()
+      -> svc_protocol_Init()
+      -> svc_motion_Init()
+      -> svc_safety_Init()
+      -> svc_watchdog_Init()
 ```
 
-这样 Application 不需要知道 EEPROM、USART、TIM、PWM 等底层对象的初始化顺序。
+这样初始化顺序集中在一个很薄的组合根里，`app_normal.c`、`app_factory.c`、`app_aging.c` 等正式业务文件仍只调用 Service。
 
 ## 5. 运行模式
 
@@ -251,6 +267,7 @@ add_library(application OBJECT)
 
 target_sources(application PRIVATE
     Src/app.c
+    Src/app_system.c
     Src/app_mode.c
     Src/app_guardian.c
     Src/app_version.c
@@ -264,13 +281,32 @@ target_include_directories(application PUBLIC
 target_link_libraries(application PUBLIC
     service
 )
+
+target_link_libraries(application PRIVATE
+    module
+    bsp
+    selected_board_config
+)
 ```
 
 规则：
 
-- `application` 只链接 `service`。
-- `application` 不直接链接 `module`、`bsp`、`stm32cubemx`。
+- `application` 的模式/业务代码只调用 Service。
+- 如果 `app_system.c` 作为组合根直接包含 BSP/Module 头文件，`application` 可以 `PRIVATE` 链接 `module`、`bsp`、`selected_board_config`，但只能用于初始化顺序。
+- `application` 不直接链接 `stm32cubemx`。
 - 生成的 `app_version.h` 可以从 `${CMAKE_BINARY_DIR}/generated` 引入。
+
+Bring-up 例外：
+
+```cmake
+if(APP_ENABLE_BRINGUP)
+    target_sources(application PRIVATE Src/app_bringup.c)
+    target_compile_definitions(application PUBLIC APP_ENABLE_BRINGUP=1)
+    target_link_libraries(application PRIVATE bsp selected_board_config)
+endif()
+```
+
+该例外只用于 Debug 或板级验证 preset，正式 Release 必须关闭。
 
 ## 10. 测试
 

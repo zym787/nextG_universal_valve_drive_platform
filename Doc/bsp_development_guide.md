@@ -32,12 +32,12 @@ Application 编排运行模式和业务流程
 ```text
 mod_eeprom
   -> bsp_soft_i2c 或 bsp_i2c
-  -> bsp_time / bsp_dwt
+  -> bsp_timer / bsp_dwt
 
 mod_stepper_driver
   -> bsp_gpio
   -> bsp_timer / bsp_pwm
-  -> bsp_time
+  -> bsp_timer
 
 svc_motion
   -> mod_stepper_driver
@@ -72,6 +72,7 @@ Application -> CubeMX/LL/CMSIS
 - Service 可以调用 Module。
 - Module 可以调用 BSP。
 - BSP 不能调用 Module。
+- `APP_ENABLE_BRINGUP` 下的 `app_bringup.c` 是板级验证例外，可短期直调 BSP；Release 正式功能不允许这样做。
 
 ## 3. 分层职责边界
 
@@ -132,7 +133,7 @@ Service 负责：
 - `svc_param`：参数结构、双副本、CRC、版本迁移、默认值。
 - `svc_motion`：初期统一承载两位阀/多位阀模型、距离、速度、步数换算、运动状态机和到位判断。
 - `svc_safety`：急停、错位重走、超时、故障保持。
-- `svc_system`：Service/Module/BSP 初始化和轮询聚合入口。
+- `svc_system`：Service 内部初始化和轮询聚合入口。
 
 `svc_valve`、`svc_position` 是后续复杂化后的拆分项，不建议初期强制建立。
 
@@ -259,7 +260,7 @@ Service/
 | `bsp` | 必须 | BSP 初始化和轮询入口 |
 | `bsp_gpio` | 必须 | 只提供 MCU GPIO 读写、中断配置，不表达光感/电机 EN/DIR 业务名 |
 | `bsp_usart` | 必须 | 只提供串口收发、DMA/中断、ringbuffer 接入，不解析协议 |
-| `bsp_time` | 必须 | 毫秒 tick 和超时计算 |
+| `bsp_timer` | 必须 | 毫秒 tick 和超时计算 |
 | `bsp_dwt` | 建议 | 微秒延时、soft I2C 时序、短耗时测量 |
 | `bsp_soft_i2c` | 视硬件决定 | 只提供 I2C 总线 start/stop/read/write，不理解 EEPROM |
 | `bsp_timer` | 建议 | 通用 TIM 周期、计数、比较能力 |
@@ -276,7 +277,7 @@ bsp_status
 bsp
 bsp_gpio
 bsp_usart
-bsp_time
+bsp_timer
 bsp_dwt
 bsp_soft_i2c
 bsp_timer
@@ -550,7 +551,7 @@ void bsp_Poll(void);
 #include "bsp_iwdg.h"
 #include "bsp_pwm.h"
 #include "bsp_soft_i2c.h"
-#include "bsp_time.h"
+#include "bsp_timer.h"
 #include "bsp_timer.h"
 #include "bsp_usart.h"
 
@@ -616,14 +617,16 @@ main()
   -> MX_TIMx_Init()
   -> MX_ADC_Init()
   -> app_Init()
-      -> svc_system_Init()
+      -> app_system_Init()
           -> bsp_Init()
           -> mod_eeprom_Init()
           -> mod_stepper_driver_Init()
+          -> mod_comm_port_Init()
           -> svc_param_Load()
           -> svc_protocol_Init()
           -> svc_motion_Init()
           -> svc_safety_Init()
+          -> svc_watchdog_Init()
       -> app mode init
   -> while (1)
       -> app_MainLoop()
@@ -631,20 +634,20 @@ main()
           -> app mode poll
 ```
 
-推荐由 `svc_system_Init()` 调用 `bsp_Init()`。
+推荐由 `app_system_Init()` 编排 `bsp_Init()`、`mod_xxx_Init()`、`svc_xxx_Init()`。
 
 原因：
 
-- `Application` 不直接依赖 BSP，分层更干净。
-- `svc_system` 是 Service 层系统能力聚合入口，负责初始化 Service、Module 及其依赖的 BSP。
-- 初学者仍然只需要从 `app_Init()` 进入阅读。
+- `app_system.c` 是组合根，初始化顺序集中，便于初学者从 `app_Init()` 阅读。
+- `svc_system` 不再变成“万能系统层”，只负责 Service 内部初始化和轮询。
+- `app_normal.c`、`app_factory.c`、`app_aging.c` 等正式业务文件仍然不直接调用 BSP。
 
 示例：
 
 ```c
 void app_Init(void)
 {
-    if (svc_system_Init() != SVC_OK) {
+    if (app_system_Init() != APP_OK) {
         app_EnterFaultMode();
         return;
     }
@@ -654,28 +657,30 @@ void app_Init(void)
 ```
 
 ```c
-svc_status_t svc_system_Init(void)
+app_status_t app_system_Init(void)
 {
     if (bsp_Init() != BSP_OK) {
-        return SVC_ERR_HW;
+        return APP_ERR_HW;
     }
 
     if (mod_eeprom_Init() != MOD_OK) {
-        return SVC_ERR_HW;
+        return APP_ERR_HW;
     }
 
     if (svc_param_Load() != SVC_OK) {
-        return SVC_ERR_CONFIG;
+        return APP_ERR_CONFIG;
     }
 
-    return MOD_OK;
+    return APP_OK;
 }
 ```
 
-可接受的过渡方案：
+约束：
 
-- 项目早期也可以暂时由 `app_Init()` 调 `bsp_Init()`。
-- 但最终文档推荐收敛到 `app_Init() -> svc_system_Init() -> bsp_Init()`。
+- `app_system.c` 可以包含 `bsp.h`、`mod_xxx.h`、`svc_xxx.h`。
+- `app_system.c` 只写初始化和关闭顺序，不写业务状态机。
+- Service 不直接调用 BSP。
+- Module 不直接调用 LL/HAL。
 
 ## 12. 头文件引用规则
 
@@ -844,9 +849,9 @@ target_link_libraries(application
 - 是否把业务规则放 Service？
 - BSP public header 是否没有 LL/HAL 类型？
 - Module public header 是否没有 STM32 寄存器类型？
-- Application 是否没有包含 `bsp_xxx.h` 和 `mod_xxx.h`？
+- Application 的模式/业务文件是否没有包含 `bsp_xxx.h` 和 `mod_xxx.h`？
 - `bsp.c` 是否没有包含 `mod_xxx.h`？
-- `svc_system_Init()` 是否是 BSP 初始化的唯一入口？
+- BSP 初始化是否只出现在 `app_system.c` 组合根或受控的 bring-up 路径？
 - BSP 对外接口是否统一返回 `bsp_status_t`？
 - 是否没有把 HAL/LL/SDK 错误码暴露给 Module？
 - 单元测试是否可以通过 mock BSP 覆盖 Module？

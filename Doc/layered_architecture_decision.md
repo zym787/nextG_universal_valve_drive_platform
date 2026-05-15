@@ -45,12 +45,15 @@ BSP: MCU 外设怎么操作
 - Normal / Factory / Aging 模式编排。
 - 主循环入口。
 - 应用级守护、故障保持和降级策略。
+- `app.c/app_system.c` 作为组合根，编排 BSP、Module、Service 初始化顺序。
 
 不负责：
 
-- 不直接调用 Module/BSP。
+- 模式和业务文件不直接调用 Module/BSP。
 - 不解析底层协议帧。
 - 不操作 EEPROM、电机、GPIO、USART。
+
+例外：`app_system.c` 可做初始化组合根；`APP_ENABLE_BRINGUP` 下的 `app_bringup.c` 可用于早期点灯、串口 echo、IWDG 基础验证，验证完成后应关闭或迁移到正式分层。
 
 ### Service
 
@@ -60,7 +63,7 @@ BSP: MCU 外设怎么操作
 - `svc_param`：参数、默认值、EEPROM 双副本、CRC、版本迁移。
 - `svc_motion`：阀门模型、距离/速度/步数换算、运动状态机。
 - `svc_safety`：急停、超时、错位重走、故障保持。
-- `svc_system`：初始化和轮询聚合。
+- `svc_system`：Service 内部初始化和轮询聚合，不初始化 BSP/Module。
 
 不负责：
 
@@ -110,6 +113,8 @@ BSP: MCU 外设怎么操作
 - EEPROM 地址、页大小、容量。
 
 结论：轻量板卡差异集中到 BoardConfig；MCU、时钟树、外设实例明显变化时再拆独立 CubeMX 工程。
+
+初期 BoardConfig 只做 `static const` 配置表，不做运行时动态配置系统，避免占用 RAM 和增加理解成本。
 
 ### ThirdParty
 
@@ -161,7 +166,7 @@ bsp_usart.c
 
 可以小步演进：
 
-- RXNE -> DMA + IDLE。
+- RXNE -> DMA + IDLE，或用定时器/时间戳辅助 Modbus RTU 帧边界。
 - 恒速步进 -> 梯形加减速。
 - vendor Modbus -> submodule。
 - Ceedling 覆盖率观察 -> 覆盖率门槛。
@@ -179,11 +184,12 @@ bsp_usart.c
 
 1. 建立 `BoardConfig`、`ThirdParty`、`BSP`、`Module`、`Service`、`Application` 的 CMake target。
 2. `main.c` 只调用 `app_Init()` 和 `app_MainLoop()`。
-3. BSP 先完成 GPIO、USART、TIM/PWM、I2C、IWDG、DWT。
-4. Module 先完成 EEPROM、步进驱动、传感器、通信口。
-5. Service 先完成参数、协议、运动、安全。
-6. Application 先完成 Normal、Factory、Aging 模式入口。
-7. Ceedling 优先覆盖 Service，再覆盖 Module 和 Application。
+3. 在 `app_system.c` 固定 BSP、Module、Service 初始化顺序。
+4. BSP 先完成 GPIO、USART、TIM/PWM、I2C、IWDG、DWT。
+5. Module 先完成 EEPROM、步进驱动、传感器、通信口。
+6. Service 先完成参数、协议、运动、安全。
+7. Application 先完成 Normal、Factory、Aging 模式入口。
+8. 测试先用 Unity + 手写 fake 跑通，再引入 Ceedling/CMock/覆盖率。
 
 最终边界一句话：
 

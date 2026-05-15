@@ -40,7 +40,7 @@
 | 发布 | GitHub Actions + GitHub Release | tag 触发自动固件发布 |
 | 文档 | Markdown + Mermaid | 易维护、易审查 |
 
-不建议初期引入完整 RTOS、复杂 Bootloader 或 MCU 端 JSON 解析。资源更大或需求成熟后再演进。
+不建议初期引入完整 RTOS、复杂 Bootloader、完整 printf 日志体系或 MCU 端 JSON 解析。资源更大或需求成熟后再演进。
 
 ## 3. 总体架构
 
@@ -88,11 +88,14 @@ flowchart TB
 核心依赖规则：
 
 ```text
-Application 只依赖 Service
+Application 的模式/业务文件只依赖 Service
+Application 的组合根 app.c/app_system.c 可编排初始化顺序
 Service 只依赖 Module 和纯软件 ThirdParty
 Module 只依赖 BSP、BoardConfig 和必要 ThirdParty
 BSP 只依赖 CubeMX/LL/CMSIS、BoardConfig 和必要 ThirdParty
 ```
+
+`app.c/app_system.c` 是组合根，允许调用 `bsp_Init()`、`mod_xxx_Init()`、`svc_xxx_Init()` 来固定初始化顺序，但不写业务逻辑。早期 Bring-up 允许用 `APP_ENABLE_BRINGUP` 隔离少量短路径，例如 `app_bringup.c` 直接调用 BSP 做 LED 闪烁、USART echo、IWDG 基础验证。Release 正式功能仍必须遵守上面的依赖规则。
 
 ## 5. 运行模型
 
@@ -101,7 +104,10 @@ BSP 只依赖 CubeMX/LL/CMSIS、BoardConfig 和必要 ThirdParty
 ```text
 main.c
   -> app_Init()
-      -> svc_system_Init()
+      -> app_system_Init()
+          -> bsp_Init()
+          -> mod_xxx_Init()
+          -> svc_system_Init()
   -> while (1)
       -> app_MainLoop()
           -> svc_system_Poll()
@@ -116,6 +122,13 @@ USART/DMA/EXTI/TIM event -> 写 ringbuffer 或置位事件 -> 主循环解析和
 ```
 
 这样可以在不引入 RTOS 的情况下保持通信实时性和调试简单度。后续引入 FreeRTOS/RT-Thread 时，优先把 `Poll` 迁移为任务，接口不大改。
+
+通信实时性约束：
+
+- Modbus RTU 帧边界不能只依赖 1ms `Poll()`。
+- 优先用 USART IDLE、定时器或接收时间戳判断 3.5 字符间隔。
+- RS485 发送方向控制必须等待 `TC` 发送完成后再释放 DE。
+- 中断和 DMA 回调只做收字节、记时间、写 ringbuffer、置事件标志。
 
 ## 6. 参数与存储
 
@@ -147,9 +160,11 @@ MCU 不直接解析 JSON/INI。
 
 ```text
 Service: 目标位置、距离/速度换算、运动状态机
-Module: STEP/DIR/EN 驱动适配
+Module: STEP/DIR/EN 驱动适配、脉冲计数、到步停止、急停快速关断
 BSP: TIM/PWM/GPIO 原语
 ```
+
+目标步数停止、光感急停和 PWM 输出关闭应尽量在 Module/BSP 快速路径完成；Service 负责目标、策略和故障判断，不做微秒级脉冲控制。
 
 可靠性链路：
 
@@ -174,6 +189,8 @@ app_guardian: 应用级降级和喂狗条件
 2. Module 可 mock 的器件驱动：EEPROM、步进驱动、传感器。
 3. Application 模式切换和守护逻辑。
 4. BSP 通过代码审查、示波器和 HIL 验证。
+
+测试工具落地顺序：先用 Unity + 手写 fake 跑通最小测试，再接入 Ceedling，最后再引入 CMock 和覆盖率门槛。
 
 CI 必须逐步包含：
 
@@ -214,7 +231,7 @@ tag release artifacts
 ## 10. 验收标准
 
 - `main.c` 中不堆业务逻辑。
-- Application 不直接调用 Module/BSP。
+- Application 的模式/业务文件不直接调用 Module/BSP；`app_system.c` 初始化例外。
 - Service 不直接调用 BSP/LL/HAL。
 - Module 不直接调用 LL/HAL。
 - BSP public header 不暴露 STM32 LL/HAL 类型。

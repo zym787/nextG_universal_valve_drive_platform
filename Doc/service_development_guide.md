@@ -20,11 +20,12 @@ Application 决定当前模式做什么，Service 决定系统规则怎么执行
 
 适合放在 Service：
 
-- `svc_system`：初始化和轮询聚合。
+- `svc_system`：Service 内部初始化和轮询聚合，不负责 BSP/Module 初始化。
 - `svc_protocol`：协议解析、命令分发、响应封包。
 - `svc_param`：参数校验、默认值、EEPROM 双副本、CRC、版本迁移。
 - `svc_motion`：距离、速度、步数换算、运动状态机。
 - `svc_safety`：急停、超时、错位重走、故障保持。
+- `svc_watchdog`：关键任务 alive 上报和条件喂狗策略。
 
 后续复杂后再拆：
 
@@ -123,27 +124,32 @@ typedef enum {
 
 ### 5.2 系统聚合
 
-`svc_system` 是初始化和轮询入口：
+`svc_system` 是 Service 内部初始化和轮询入口：
 
 ```c
 svc_status_t svc_system_Init(void);
 void svc_system_Poll(void);
 ```
 
-推荐初始化链路：
+推荐初始化链路由 Application 组合根编排：
 
 ```text
 main.c
   -> app_Init()
-      -> svc_system_Init()
+      -> app_system_Init()
           -> bsp_Init()
           -> mod_eeprom_Init()
           -> mod_stepper_driver_Init()
-          -> svc_param_Init()
-          -> svc_protocol_Init()
-          -> svc_motion_Init()
-          -> svc_safety_Init()
+          -> mod_comm_port_Init()
+          -> svc_system_Init()
+              -> svc_param_Init()
+              -> svc_protocol_Init()
+              -> svc_motion_Init()
+              -> svc_safety_Init()
+              -> svc_watchdog_Init()
 ```
+
+这样 `Service` 不需要知道 BSP 初始化顺序，也不会变成“万能系统层”。`svc_system` 只管理 Service 自己的子服务。
 
 ### 5.3 参数服务
 
@@ -194,6 +200,7 @@ void svc_motion_Poll(void);
 - 不生成软件延时脉冲。
 - 不直接访问 GPIO/TIM。
 - 通过 `mod_stepper_driver` 执行 STEP/DIR/EN。
+- 不在 1ms `Poll()` 中做微秒级脉冲计数；目标步数停止、急停关断由 Module/BSP 快速路径完成。
 
 ### 5.5 安全服务
 
@@ -242,7 +249,7 @@ target_link_libraries(service PUBLIC
 
 - `service` 可以依赖 `module` 和纯软件 ThirdParty。
 - `service` 不直接依赖 `bsp`、`stm32cubemx`。
-- `application` 只依赖 `service`。
+- `application` 的模式/业务代码只依赖 `service`；`app_system.c` 作为组合根可例外编排初始化。
 
 ## 7. 错误处理
 

@@ -127,7 +127,7 @@ mod_status_t mod_eeprom_IsReady(void);
 
 ### 4.3 步进驱动器
 
-`mod_stepper_driver` 只适配驱动器和板上 STEP/DIR/EN 接法。
+`mod_stepper_driver` 适配驱动器和板上 STEP/DIR/EN 接法，并负责脉冲输出的快速停止边界。Service 决定“要去哪、策略是什么”，Module 保证“脉冲怎么安全停下来”。
 
 ```c
 typedef enum {
@@ -138,16 +138,18 @@ typedef enum {
 mod_status_t mod_stepper_driver_Init(void);
 mod_status_t mod_stepper_driver_Enable(uint8_t channel, bool enable);
 mod_status_t mod_stepper_driver_SetDirection(uint8_t channel, mod_stepper_dir_t dir);
-mod_status_t mod_stepper_driver_StartPulse(uint8_t channel, uint32_t freq_hz);
+mod_status_t mod_stepper_driver_StartPulse(uint8_t channel, uint32_t steps, uint32_t freq_hz);
 mod_status_t mod_stepper_driver_StopPulse(uint8_t channel);
 mod_status_t mod_stepper_driver_EmergencyStop(uint8_t channel);
+uint32_t mod_stepper_driver_GetDoneSteps(uint8_t channel);
 ```
 
 边界：
 
 - 脉冲由 TIM/PWM 生成，不用软件延时模拟。
+- 目标步数计数、到步停止、光感急停后的 PWM 关闭，应尽量在 Module/BSP 快速路径完成。
 - 距离到步数、速度曲线、错位重走放 `svc_motion` / `svc_safety`。
-- 不在 Module 中写阀门状态机。
+- 不在 Module 中写阀门业务状态机、重走策略和故障保持策略。
 
 ### 4.4 传感输入
 
@@ -175,6 +177,13 @@ mod_status_t mod_comm_port_RegisterRxCallback(mod_comm_port_rx_callback_t callba
 ```
 
 `mod_comm_port` 适配 USART/RS485/CAN 物理通道；协议解析放 `svc_protocol`。
+
+实时性规则：
+
+- USART 接收可以来自 RXNE、DMA half/full、IDLE 或定时器辅助帧边界。
+- Modbus RTU 的 3.5 字符间隔不要只靠 1ms `Poll()` 判断。
+- RS485 发送时，DE/RE 方向控制必须等底层 `TC` 发送完成后再释放。
+- Module 可以产生“收到完整帧”或“接收空闲”事件，但不解析 Modbus 寄存器。
 
 ## 5. CMake
 

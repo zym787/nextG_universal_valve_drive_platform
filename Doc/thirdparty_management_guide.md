@@ -12,13 +12,13 @@
 ThirdParty 放外部源码，项目自有适配代码放 Service、Module 或 BSP。
 ```
 
-必须或建议引入：
+分阶段引入：
 
-- ringbuffer：环形队列。
-- event/message：轻量事件或消息通知。
-- modbus：Modbus RTU slave。
-- osal：裸机调度/未来 RTOS 抽象。
-- log：轻量日志。
+| 阶段 | 组件 | 说明 |
+| --- | --- | --- |
+| 第一批 | ringbuffer、最小 event、最小 Modbus RTU slave | 先满足通信和协议闭环 |
+| 第二批 | 轻量 log | Release 必须可裁剪，字符串要短 |
+| 第三批 | 轻量 OSAL scheduler | 只做 tick、timeout、短任务调度 |
 
 结论：第三方源码保持上游命名，并集中放在 `ThirdParty`。项目自有适配代码放回 `Service`、`Module` 或 `BSP`。
 
@@ -31,8 +31,8 @@ ThirdParty/
   ringbuffer/
   event/
   modbus/
-  osal/
-  log/
+  log/          后续加入
+  osal/         后续加入
   CMakeLists.txt
 ```
 
@@ -149,10 +149,11 @@ target_link_libraries(service PUBLIC
 - 初期使用 Modbus RTU slave。
 - 用于工厂写参、状态读取、动作测试。
 - 先 vendor 固定版本，稳定后再评估 submodule。
+- 选择库时优先考虑代码体积、无动态内存、可裁剪功能，不追求协议栈“大而全”。
 
 ### 5.4 osal
 
-初期 OSAL 只做轻量抽象：
+OSAL 放到第三批。初期 OSAL 只做轻量抽象：
 
 ```c
 uint32_t osal_GetTickMs(void);
@@ -161,6 +162,7 @@ void osal_SchedulerPoll(void);
 ```
 
 不要一开始做完整 RTOS 封装。
+不要把队列、线程、互斥锁、动态内存池一次做全；等 FreeRTOS/RT-Thread 真正引入时再扩展。
 
 ### 5.5 log
 
@@ -170,6 +172,8 @@ void osal_SchedulerPoll(void);
 - 不大量占用 RAM。
 - 不在中断中格式化长字符串。
 - 支持输出到串口或 ringbuffer。
+- 禁止默认引入完整 `printf` 浮点格式化。
+- 日志字符串尽量短，错误码优先。
 
 ## 6. 测试和 CI
 
@@ -191,6 +195,7 @@ CI 建议：
 
 - 第三方源码保持原始文件名、函数名、类型名和宏定义。
 - 每个组件记录来源、版本或 commit、许可证。
+- 第一批只引入 ringbuffer、最小 event、最小 Modbus RTU slave。
 - 小型稳定库优先 vendor；Modbus 稳定后再评估 git submodule。
 - 静态分析默认可排除大型第三方源码，减少噪声。
 - 修改第三方源码时必须记录 patch 原因。
